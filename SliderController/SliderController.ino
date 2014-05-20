@@ -56,9 +56,8 @@ void setup() {
   digitalWrite(LED_PIN, HIGH); //light on
   Serial.begin(9600);
   Serial.println("Starting ...");
-  Serial.println("Running #Home ...");
   initiatePins();
-  //runHome();
+  runHome();
   Serial.println("Done init.");
   digitalWrite(LED_PIN, LOW); //light off
 }
@@ -242,13 +241,10 @@ void loop() {
         //Calculate here from input-units to steps s.o.
         runStepper((EEPROM.read(2)*32 + EEPROM.read(3)),(EEPROM.read(8)*32 + EEPROM.read(9)),(EEPROM.read(14)*32 + EEPROM.read(15)),(EEPROM.read(20)*32 + EEPROM.read(21)),(EEPROM.read(26)*32 + EEPROM.read(27)), false);
         if (tempString.toInt() == 0){
-          delay(5000);
+          delay(4000);
           CAM_MODEL.shutterDelayed(); // Stop Vidjo
         }
-        //runHome();
-
-        //fServo.write(1);
-        //zServo.write(20);
+        runHome();
         Serial.println("Done.");
         activateDrivers(false);
         break;
@@ -312,6 +308,14 @@ void runStepper (int iX, int iG, int iN, int iF, int iZ, boolean vMax){
   fStepper.setAcceleration(MAX_ACCEL);
   zStepper.setAcceleration(MAX_ACCEL);
 
+  //Move to Position [mm] * Stepindicator
+  //xStepper.runToNewPosition(iX*STEPS_MM)
+  xStepper.move(iX*STEPS_MM); //MoveTo ??
+  gStepper.move(iG*STEPS_MM);
+  nStepper.move(iN*STEPS_MM);
+  fStepper.move(iF*STEPS_MM);
+  zStepper.move(iZ*STEPS_MM);
+
   if(vMax){  
     xStepper.setMaxSpeed(MAX_SPEED); // with vMax
     gStepper.setMaxSpeed(MAX_SPEED); //setMaxSpeed eigentlich
@@ -328,13 +332,8 @@ void runStepper (int iX, int iG, int iN, int iF, int iZ, boolean vMax){
     fStepper.setMaxSpeed(EEPROM.read(22)*32 + EEPROM.read(23));
     zStepper.setMaxSpeed(EEPROM.read(28)*32 + EEPROM.read(29));
   }
-  //Move to Position [mm] * Stepindicator
-  xStepper.move(iX*STEPS_MM); //MoveTo ??
-  gStepper.move(iG*STEPS_MM);
-  nStepper.move(iN*STEPS_MM);
-  fStepper.move(iF*STEPS_MM);
-  zStepper.move(iZ*STEPS_MM);
 
+  //Picture Timer
   tTime.every(timer * 1000, callback, counter);
 
   // Good abort criteria
@@ -349,6 +348,13 @@ void runStepper (int iX, int iG, int iN, int iF, int iZ, boolean vMax){
 
     //timer update
     tTime.update();
+  }
+  if(vMax){  
+    xStepper.setCurrentPosition(0);
+    gStepper.setCurrentPosition(0);
+    nStepper.setCurrentPosition(0);
+    fStepper.setCurrentPosition(0);
+    zStepper.setCurrentPosition(0);
   }
 }
 
@@ -365,6 +371,7 @@ void callback (){
 /////////////////////////////////////////////////////////////
 void runHome (){
   //Set Direction //test if needed:  digitalWrite(X_DIR_PIN , HIGH);
+  Serial.println("Moving #Home ...");
 
   // Set target Speed
   xStepper.setMaxSpeed(MAX_SPEED); // with vMax
@@ -378,25 +385,33 @@ void runHome (){
   zStepper.setMaxSpeed(MAX_SPEED);
   zStepper.setSpeed(MAX_SPEED);
 
-  //Move
-  while(!digitalRead(X_MAX_PIN) || !digitalRead(X_MAX_PIN)){
-    xStepper.runSpeed();
-    gStepper.runSpeed();
-    nStepper.runSpeed();
-    fStepper.runSpeed();
-    zStepper.runSpeed();
-  }
+  //Move 
+   while(!digitalRead(X_MAX_PIN) && !digitalRead(X_MIN_PIN)){
+   xStepper.runSpeed();
+   gStepper.runSpeed();
+   nStepper.runSpeed();
+   fStepper.runSpeed();
+   zStepper.runSpeed();
+   }
+   
+   //set Pos to 0
+   xStepper.setCurrentPosition(0);
+   gStepper.setCurrentPosition(0);
+   nStepper.setCurrentPosition(0);
+   fStepper.setCurrentPosition(0);
+   zStepper.setCurrentPosition(0);
+   
 }
 
 /////////////////////////////////////////////////////////////
-// S E T S T E P P E R D A T A : Set Acceleration and Speed
+// S E T S T E P P E R D A T A : Set Acceleration (and Speed)
 /////////////////////////////////////////////////////////////
-void setStepperData (){
-  xStepper.setAcceleration(100.0);
-  gStepper.setAcceleration(100.0);
-  nStepper.setAcceleration(100.0);
-  fStepper.setAcceleration(100.0);
-  zStepper.setAcceleration(100.0);
+void setStepperData (int iAccel){
+  xStepper.setAcceleration(iAccel);
+  gStepper.setAcceleration(iAccel);
+  nStepper.setAcceleration(iAccel);
+  fStepper.setAcceleration(iAccel);
+  zStepper.setAcceleration(iAccel);
 }
 
 /////////////////////////////////////////////////////////////
@@ -468,6 +483,3 @@ void initiatePins (){
   fServo.attach(F_SERVO_PIN);  // attaches the servo on pin 9 to the servo object
   zServo.attach(Z_SERVO_PIN);  // attaches the servo on pin 9 to the servo object 
 }
-
-
-
