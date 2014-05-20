@@ -22,16 +22,17 @@
 
 #include "pins.c"
 #include "lcd.c"
-
 #include <AccelStepper.h>
 #include <EEPROM.h>
 #include <Servo.h> 
+#include <Timer.h>
+#include <LiquidCrystal.h>
 #include <multiCameraIrControl.h> 
-
-//setMinPulseWidth(20);
 
 String theString = "";
 String tempString = "";
+
+Timer tTime;
 
 Canon CAM_MODEL(CAM_PIN);
 
@@ -53,12 +54,12 @@ Servo zServo;
 
 void setup() {
   digitalWrite(LED_PIN, HIGH); //light on
+  Serial.begin(9600);
+  Serial.println("Starting ...");
+  Serial.println("Running #Home ...");
   initiatePins();
-  Serial.begin(115200);
-  delay(5000);
   //runHome();
-
-  //default Acceleration
+  Serial.println("Done init.");
   digitalWrite(LED_PIN, LOW); //light off
 }
 
@@ -72,7 +73,6 @@ void loop() {
     theString += recieved;
     if (recieved == '\n')
     {
-      //hier stimmt was mit dem Speichern nicht. Muss das irgendwie in 2 Byte bekommen
       switch (theString.charAt(0)) { // Switch between the Codes: (e.g.: X 100,20,10;) 
       case 'X':
         Serial.println(theString);
@@ -84,12 +84,12 @@ void loop() {
         tempString = theString.substring(theString.indexOf(",")+1, theString.lastIndexOf(","));
         EEPROM.write(2, tempString.toInt()/32); // End Pos in EEPROM
         delay(EEPROM_WRITETIME);
-        EEPROM.write(3, tempString.toInt()%32); //start Pos in EEPROM
+        EEPROM.write(3, tempString.toInt()%32); //End Pos in EEPROM
         delay(EEPROM_WRITETIME);
         tempString = theString.substring(theString.lastIndexOf(",")+1, theString.indexOf(";"));
-        EEPROM.write(4, tempString.toInt()/32); // End Pos in EEPROM
+        EEPROM.write(4, tempString.toInt()/32); // speed Pos in EEPROM
         delay(EEPROM_WRITETIME);
-        EEPROM.write(5, tempString.toInt()%32); //start Pos in EEPROM
+        EEPROM.write(5, tempString.toInt()%32); //speed Pos in EEPROM
         delay(EEPROM_WRITETIME);
         Serial.print("200 OK go from ");
         Serial.print(EEPROM.read(0)*32 + EEPROM.read(1));
@@ -103,19 +103,19 @@ void loop() {
         break;
       case 'G':    
         tempString = theString.substring(theString.indexOf(" ")+1, theString.indexOf(","));
-        EEPROM.write(6, tempString.toInt()/32); // End Pos in EEPROM
+        EEPROM.write(6, tempString.toInt()/32); // Start Pos in EEPROM
         delay(EEPROM_WRITETIME);
-        EEPROM.write(7, tempString.toInt()%32); //start Pos in EEPROM
+        EEPROM.write(7, tempString.toInt()%32); //Start Pos in EEPROM
         delay(EEPROM_WRITETIME);
         tempString = theString.substring(theString.indexOf(",")+1, theString.lastIndexOf(","));
         EEPROM.write(8, tempString.toInt()/32); // End Pos in EEPROM
         delay(EEPROM_WRITETIME);
-        EEPROM.write(9, tempString.toInt()%32); //start Pos in EEPROM
+        EEPROM.write(9, tempString.toInt()%32); // End Pos in EEPROM
         delay(EEPROM_WRITETIME);
         tempString = theString.substring(theString.lastIndexOf(",")+1, theString.indexOf(";"));
-        EEPROM.write(10, tempString.toInt()/32); // End Pos in EEPROM
+        EEPROM.write(10, tempString.toInt()/32); // Speed Pos in EEPROM
         delay(EEPROM_WRITETIME);
-        EEPROM.write(11, tempString.toInt()%32); //start Pos in EEPROM
+        EEPROM.write(11, tempString.toInt()%32); //Speed Pos in EEPROM
         delay(EEPROM_WRITETIME);
         Serial.print("200 OK gier from ");
         Serial.print(EEPROM.read(6)*32 + EEPROM.read(7));
@@ -129,19 +129,19 @@ void loop() {
         break;
       case 'N':    
         tempString = theString.substring(theString.indexOf(" ")+1, theString.indexOf(","));
-        EEPROM.write(12, tempString.toInt()/32); // End Pos in EEPROM
+        EEPROM.write(12, tempString.toInt()/32); // Start Pos in EEPROM
         delay(EEPROM_WRITETIME);
-        EEPROM.write(13, tempString.toInt()%32); //start Pos in EEPROM
+        EEPROM.write(13, tempString.toInt()%32); // Start Pos in EEPROM
         delay(EEPROM_WRITETIME);
         tempString = theString.substring(theString.indexOf(",")+1, theString.lastIndexOf(","));
         EEPROM.write(14, tempString.toInt()/32); // End Pos in EEPROM
         delay(EEPROM_WRITETIME);
-        EEPROM.write(15, tempString.toInt()%32); //start Pos in EEPROM
+        EEPROM.write(15, tempString.toInt()%32); // End Pos in EEPROM
         delay(EEPROM_WRITETIME);
         tempString = theString.substring(theString.lastIndexOf(",")+1, theString.indexOf(";"));
-        EEPROM.write(16, tempString.toInt()/32); // End Pos in EEPROM
+        EEPROM.write(16, tempString.toInt()/32); // Speed Pos in EEPROM
         delay(EEPROM_WRITETIME);
-        EEPROM.write(17, tempString.toInt()%32); //start Pos in EEPROM
+        EEPROM.write(17, tempString.toInt()%32); //Speed Pos in EEPROM
         delay(EEPROM_WRITETIME);
         Serial.print("200 OK nick from ");
         Serial.print(EEPROM.read(12)*32 + EEPROM.read(13));
@@ -155,19 +155,19 @@ void loop() {
         break;
       case 'F':    
         tempString = theString.substring(theString.indexOf(" ")+1, theString.indexOf(","));
-        EEPROM.write(18, tempString.toInt()/32); // End Pos in EEPROM
+        EEPROM.write(18, tempString.toInt()/32); // Start Pos in EEPROM
         delay(EEPROM_WRITETIME);
-        EEPROM.write(19, tempString.toInt()%32); //start Pos in EEPROM
+        EEPROM.write(19, tempString.toInt()%32); // Start Pos in EEPROM
         delay(EEPROM_WRITETIME);
         tempString = theString.substring(theString.indexOf(",")+1, theString.lastIndexOf(","));
         EEPROM.write(20, tempString.toInt()/32); // End Pos in EEPROM
         delay(EEPROM_WRITETIME);
-        EEPROM.write(21, tempString.toInt()%32); //start Pos in EEPROM
+        EEPROM.write(21, tempString.toInt()%32); // End Pos in EEPROM
         delay(EEPROM_WRITETIME);
         tempString = theString.substring(theString.lastIndexOf(",")+1, theString.indexOf(";"));
-        EEPROM.write(22, tempString.toInt()/32); // End Pos in EEPROM
+        EEPROM.write(22, tempString.toInt()/32); // Speed Pos in EEPROM
         delay(EEPROM_WRITETIME);
-        EEPROM.write(23, tempString.toInt()%32); //start Pos in EEPROM
+        EEPROM.write(23, tempString.toInt()%32); // Speed Pos in EEPROM
         delay(EEPROM_WRITETIME);
         Serial.print("200 OK focus from ");
         Serial.print(EEPROM.read(18)*32 + EEPROM.read(19));
@@ -181,19 +181,19 @@ void loop() {
         break;
       case 'Z':    
         tempString = theString.substring(theString.indexOf(" ")+1, theString.indexOf(","));
-        EEPROM.write(24, tempString.toInt()/32); // End Pos in EEPROM
+        EEPROM.write(24, tempString.toInt()/32); // Start Pos in EEPROM
         delay(EEPROM_WRITETIME);
-        EEPROM.write(25, tempString.toInt()%32); //start Pos in EEPROM
+        EEPROM.write(25, tempString.toInt()%32); // Start Pos in EEPROM
         delay(EEPROM_WRITETIME);
         tempString = theString.substring(theString.indexOf(",")+1, theString.lastIndexOf(","));
         EEPROM.write(26, tempString.toInt()/32); // End Pos in EEPROM
         delay(EEPROM_WRITETIME);
-        EEPROM.write(27, tempString.toInt()%32); //start Pos in EEPROM
+        EEPROM.write(27, tempString.toInt()%32); //End Pos in EEPROM
         delay(EEPROM_WRITETIME);
         tempString = theString.substring(theString.lastIndexOf(",")+1, theString.indexOf(";"));
-        EEPROM.write(28, tempString.toInt()/32); // End Pos in EEPROM
+        EEPROM.write(28, tempString.toInt()/32); // Speed Pos in EEPROM
         delay(EEPROM_WRITETIME);
-        EEPROM.write(29, tempString.toInt()%32); //start Pos in EEPROM
+        EEPROM.write(29, tempString.toInt()%32); //Speed Pos in EEPROM
         delay(EEPROM_WRITETIME);
         Serial.print("200 OK zoom from ");
         Serial.print(EEPROM.read(24)*32 + EEPROM.read(25));
@@ -206,27 +206,26 @@ void loop() {
         tempString = "";
         break;     
       case 'S':
-        //!!!!!!!!!!!!!!!!!!TEST this 
         tempString = theString.substring(1,2);
-        EEPROM.write(30, tempString.toInt()); // End Pos in EEPROM
+        EEPROM.write(30, tempString.toInt()); // Vidjo (1) or Foto (0)?
         delay(EEPROM_WRITETIME);
         tempString = theString.substring(theString.indexOf(",")+1, theString.lastIndexOf(","));
-        EEPROM.write(32, tempString.toInt()/32); // End Pos in EEPROM
+        EEPROM.write(32, tempString.toInt()/32); // Timer
         delay(EEPROM_WRITETIME);
-        EEPROM.write(33, tempString.toInt()%32); //start Pos in EEPROM
+        EEPROM.write(33, tempString.toInt()%32);
         delay(EEPROM_WRITETIME);
         tempString = theString.substring(theString.lastIndexOf(",")+1, theString.indexOf(";"));
-        EEPROM.write(34, tempString.toInt()/32); // End Pos in EEPROM
+        EEPROM.write(34, tempString.toInt()/32); // Number of Pictures
         delay(EEPROM_WRITETIME);
-        EEPROM.write(35, tempString.toInt()%32); //start Pos in EEPROM
+        EEPROM.write(35, tempString.toInt()%32);
         delay(EEPROM_WRITETIME);
         theString = "";
         tempString = "";
-        Serial.println("Starting...");
+        Serial.println("Starting ...");
         digitalWrite(LED_PIN, HIGH);
-        Serial.println("Enable Driver..."); 
+
         activateDrivers(true);
-        Serial.println("Move to start position...");
+        Serial.println("Move to #Start ...");
         //run with vMax to Start Pos 
         //Calculate here from input-units to steps -> X >> Convert from mm to Steps
         runStepper((EEPROM.read(0)*32 + EEPROM.read(1)),(EEPROM.read(6)*32 + EEPROM.read(7)),(EEPROM.read(12)*32 + EEPROM.read(13)),(EEPROM.read(18)*32 + EEPROM.read(19)),(EEPROM.read(24)*32 + EEPROM.read(25)), true); //run with max speed
@@ -239,7 +238,7 @@ void loop() {
         }
         delay(1000);
         //run with vDefined to End
-        Serial.println("Move to end position..."); 
+        Serial.println("Move to #End ..."); 
         //Calculate here from input-units to steps s.o.
         runStepper((EEPROM.read(2)*32 + EEPROM.read(3)),(EEPROM.read(8)*32 + EEPROM.read(9)),(EEPROM.read(14)*32 + EEPROM.read(15)),(EEPROM.read(20)*32 + EEPROM.read(21)),(EEPROM.read(26)*32 + EEPROM.read(27)), false);
         if (tempString.toInt() == 0){
@@ -265,15 +264,18 @@ void loop() {
       }  
     }
   }
-  activateDrivers(false);
-  if (millis() %1000 <500) 
+  if (millis() %1000 <500) {
     digitalWrite(13, HIGH);
-  else
+    //activateDrivers(false);
+  } 
+  else {
     digitalWrite(13, LOW);
+  }
+
 }
 
 /////////////////////////////////////////////////////////////
-// W R I T E T O E  E P R O M : moves the head to Position
+// W R I T E T O E E P R O M : writes the values to EEPROM
 /////////////////////////////////////////////////////////////
 void writeToEeprom (char cIndex, int iStart, int iEnd, int iSpeed){
   switch (cIndex){
@@ -301,8 +303,8 @@ void runStepper (int iX, int iG, int iN, int iF, int iZ, boolean vMax){
   int counter = EEPROM.read(34)*32 + EEPROM.read(35);
   int foto = EEPROM.read(30);
 
-// Man könnte sich überlegen die Daten anders zu gliedern. Jetz fahrt der waren eine relative position an.
-//Absolut ist aber auch möglich mit MoveTo
+  // Man könnte sich überlegen die Daten anders zu gliedern. Jetz fahrt der waren eine relative position an.
+  //Absolut ist aber auch möglich mit MoveTo
 
   xStepper.setAcceleration(MAX_ACCEL);
   gStepper.setAcceleration(MAX_ACCEL);
@@ -316,7 +318,8 @@ void runStepper (int iX, int iG, int iN, int iF, int iZ, boolean vMax){
     nStepper.setMaxSpeed(MAX_SPEED);
     fStepper.setMaxSpeed(MAX_SPEED);
     zStepper.setMaxSpeed(MAX_SPEED);
-    counter = 0;
+
+    counter = 0; //dont shoot while MoveTo StartPos
   }
   else{
     xStepper.setMaxSpeed(EEPROM.read(4)*32 + EEPROM.read(5)); //with defined Speed from EEPROM
@@ -332,32 +335,36 @@ void runStepper (int iX, int iG, int iN, int iF, int iZ, boolean vMax){
   fStepper.move(iF*STEPS_MM);
   zStepper.move(iZ*STEPS_MM);
 
+  tTime.every(timer * 1000, callback, counter);
 
-
-  // !!!!!!!!!!!!!!!!!!2Do: test Abort criteria
+  // Good abort criteria
   while ((!digitalRead(X_MAX_PIN) && !digitalRead(X_MIN_PIN)) && (xStepper.distanceToGo() > 0 || gStepper.distanceToGo() > 0 || nStepper.distanceToGo() > 0 || fStepper.distanceToGo() > 0 || zStepper.distanceToGo() > 0)){  
-    //Achtung: Zeitkritisch. Komplexes If() führt zu langsamer Bewegung
+  //test abort criteria
+  //while ((xStepper.distanceToGo() > 0 || gStepper.distanceToGo() > 0 || nStepper.distanceToGo() > 0 || fStepper.distanceToGo() > 0 || zStepper.distanceToGo() > 0)){  
     xStepper.run();
     gStepper.run(); 
     nStepper.run(); 
     fStepper.run(); 
-    zStepper.run(); 
- 
-    // TEST this as well 
-    /*   if ((foto == 0 && millis() % 1000 <= timer) || counter != 0)
-     CAM_MODEL.shutterNow();*/
-    counter--;
+    zStepper.run();
+
+    //timer update
+    tTime.update();
   }
+}
+
+/////////////////////////////////////////////////////////////
+// C A L L B A C K: makes the pic
+/////////////////////////////////////////////////////////////
+void callback (){
+  Serial.println("Make #Shot ...");
+  CAM_MODEL.shutterNow();
 }
 
 /////////////////////////////////////////////////////////////
 // R U N H O M E : moves the head to the homing position
 /////////////////////////////////////////////////////////////
 void runHome (){
-  //Set Direction //test if needed
-  digitalWrite(X_DIR_PIN , HIGH);
-  digitalWrite(G_DIR_PIN , HIGH);
-  digitalWrite(N_DIR_PIN , HIGH);
+  //Set Direction //test if needed:  digitalWrite(X_DIR_PIN , HIGH);
 
   // Set target Speed
   xStepper.setMaxSpeed(MAX_SPEED); // with vMax
@@ -397,6 +404,8 @@ void setStepperData (){
 /////////////////////////////////////////////////////////////
 void activateDrivers (boolean state){
   if (state){
+    Serial.println("Drivers enabled ...");
+
     digitalWrite(X_ENABLE_PIN, LOW);  //LOW = an!
     digitalWrite(G_ENABLE_PIN, LOW);
     digitalWrite(N_ENABLE_PIN, LOW);
@@ -404,6 +413,8 @@ void activateDrivers (boolean state){
     digitalWrite(Z_ENABLE_PIN, LOW);
   }
   else{
+    Serial.println("Drivers desabled ...");
+
     digitalWrite(X_ENABLE_PIN, HIGH);  //HIGH = AUS!
     digitalWrite(G_ENABLE_PIN, HIGH);
     digitalWrite(N_ENABLE_PIN, HIGH);
@@ -457,3 +468,6 @@ void initiatePins (){
   fServo.attach(F_SERVO_PIN);  // attaches the servo on pin 9 to the servo object
   zServo.attach(Z_SERVO_PIN);  // attaches the servo on pin 9 to the servo object 
 }
+
+
+
