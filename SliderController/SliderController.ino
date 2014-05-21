@@ -227,7 +227,11 @@ void loop() {
         Serial.println("Move to #Start ...");
         //run with vMax to Start Pos 
         //Calculate here from input-units to steps -> X >> Convert from mm to Steps
-        runStepper((EEPROM.read(0)*32 + EEPROM.read(1)),(EEPROM.read(6)*32 + EEPROM.read(7)),(EEPROM.read(12)*32 + EEPROM.read(13)),(EEPROM.read(18)*32 + EEPROM.read(19)),(EEPROM.read(24)*32 + EEPROM.read(25)), true); //run with max speed
+        runStepper((EEPROM.read(0)*32 + EEPROM.read(1)),
+        (EEPROM.read(6)*32 + EEPROM.read(7)),
+        (EEPROM.read(12)*32 + EEPROM.read(13)),
+        (EEPROM.read(18)*32 + EEPROM.read(19)),
+        (EEPROM.read(24)*32 + EEPROM.read(25)), true); //run with max speed
         //fServo.write(1);
         //zServo.write(20);
         Serial.println("Wait..."); //Start at the next inetarion
@@ -239,7 +243,12 @@ void loop() {
         //run with vDefined to End
         Serial.println("Move to #End ..."); 
         //Calculate here from input-units to steps s.o.
-        runStepper((EEPROM.read(2)*32 + EEPROM.read(3)),(EEPROM.read(8)*32 + EEPROM.read(9)),(EEPROM.read(14)*32 + EEPROM.read(15)),(EEPROM.read(20)*32 + EEPROM.read(21)),(EEPROM.read(26)*32 + EEPROM.read(27)), false);
+        //End - Start = Way
+        runStepper((EEPROM.read(2)*32 + EEPROM.read(3))-(EEPROM.read(0)*32 + EEPROM.read(1)),
+        (EEPROM.read(8)*32 + EEPROM.read(9))-(EEPROM.read(6)*32 + EEPROM.read(7)),
+        (EEPROM.read(14)*32 + EEPROM.read(15))-(EEPROM.read(12)*32 + EEPROM.read(13)),
+        (EEPROM.read(20)*32 + EEPROM.read(21))-(EEPROM.read(18)*32 + EEPROM.read(19)),
+        (EEPROM.read(26)*32 + EEPROM.read(27))-(EEPROM.read(24)*32 + EEPROM.read(25)), false); //run the Motor from A to B
         if (tempString.toInt() == 0){
           delay(4000);
           CAM_MODEL.shutterDelayed(); // Stop Vidjo
@@ -292,12 +301,18 @@ void writeToEeprom (char cIndex, int iStart, int iEnd, int iSpeed){
 
 
 /////////////////////////////////////////////////////////////
-// R U N S T E P P E R : moves the head to Position
+// R U N S T E P P E R : moves the head over distance [IMPUT]
 /////////////////////////////////////////////////////////////
 void runStepper (int iX, int iG, int iN, int iF, int iZ, boolean vMax){
   int timer = EEPROM.read(32)*32 + EEPROM.read(33);
   int counter = EEPROM.read(34)*32 + EEPROM.read(35);
   int foto = EEPROM.read(30);
+
+  Serial.println(iX);
+  Serial.println(iG);
+  Serial.println(iN);
+  Serial.println(iF);
+  Serial.println(iZ);
 
   // Man könnte sich überlegen die Daten anders zu gliedern. Jetz fahrt der waren eine relative position an.
   //Absolut ist aber auch möglich mit MoveTo
@@ -332,14 +347,16 @@ void runStepper (int iX, int iG, int iN, int iF, int iZ, boolean vMax){
     fStepper.setMaxSpeed(EEPROM.read(22)*32 + EEPROM.read(23));
     zStepper.setMaxSpeed(EEPROM.read(28)*32 + EEPROM.read(29));
   }
-
   //Picture Timer
   tTime.every(timer * 1000, callback, counter);
 
-  // Good abort criteria
-  while ((!digitalRead(X_MAX_PIN) && !digitalRead(X_MIN_PIN)) && (xStepper.distanceToGo() > 0 || gStepper.distanceToGo() > 0 || nStepper.distanceToGo() > 0 || fStepper.distanceToGo() > 0 || zStepper.distanceToGo() > 0)){  
-  //test abort criteria
-  //while ((xStepper.distanceToGo() > 0 || gStepper.distanceToGo() > 0 || nStepper.distanceToGo() > 0 || fStepper.distanceToGo() > 0 || zStepper.distanceToGo() > 0)){  
+  /* Good abort criteria
+  while ((!digitalRead(X_MAX_PIN) && !digitalRead(X_MIN_PIN)) 
+    && (xStepper.distanceToGo() > 0 || gStepper.distanceToGo() > 0 
+    || nStepper.distanceToGo() > 0 || fStepper.distanceToGo() > 0 || zStepper.distanceToGo() > 0)){  */
+    //test abort criteria
+    while ((xStepper.distanceToGo() > 0 || gStepper.distanceToGo() > 0 
+    || nStepper.distanceToGo() > 0 || fStepper.distanceToGo() > 0 || zStepper.distanceToGo() > 0)){  
     xStepper.run();
     gStepper.run(); 
     nStepper.run(); 
@@ -349,6 +366,7 @@ void runStepper (int iX, int iG, int iN, int iF, int iZ, boolean vMax){
     //timer update
     tTime.update();
   }
+  //!!!!!!!!!!! 2DoIs this usefull? test at home -> maybe. turns function from Position based movement, to distance based
   if(vMax){  
     xStepper.setCurrentPosition(0);
     gStepper.setCurrentPosition(0);
@@ -385,22 +403,23 @@ void runHome (){
   zStepper.setMaxSpeed(MAX_SPEED);
   zStepper.setSpeed(MAX_SPEED);
 
-  //Move 
-   while(!digitalRead(X_MAX_PIN) && !digitalRead(X_MIN_PIN)){
-   xStepper.runSpeed();
-   gStepper.runSpeed();
-   nStepper.runSpeed();
-   fStepper.runSpeed();
-   zStepper.runSpeed();
-   }
-   
-   //set Pos to 0
-   xStepper.setCurrentPosition(0);
-   gStepper.setCurrentPosition(0);
-   nStepper.setCurrentPosition(0);
-   fStepper.setCurrentPosition(0);
-   zStepper.setCurrentPosition(0);
-   
+  //Move
+ //TEST: decomment this loop 
+  /*while(!digitalRead(X_MAX_PIN) && !digitalRead(X_MIN_PIN)){
+    xStepper.runSpeed();
+    gStepper.runSpeed();
+    nStepper.runSpeed();
+    fStepper.runSpeed();
+    zStepper.runSpeed();
+  }*/
+
+  //set Pos to 0
+  xStepper.setCurrentPosition(0);
+  gStepper.setCurrentPosition(0);
+  nStepper.setCurrentPosition(0);
+  fStepper.setCurrentPosition(0);
+  zStepper.setCurrentPosition(0);
+
 }
 
 /////////////////////////////////////////////////////////////
@@ -483,3 +502,5 @@ void initiatePins (){
   fServo.attach(F_SERVO_PIN);  // attaches the servo on pin 9 to the servo object
   zServo.attach(Z_SERVO_PIN);  // attaches the servo on pin 9 to the servo object 
 }
+
+
