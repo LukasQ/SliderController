@@ -350,13 +350,13 @@ void runStepper (int iX, int iG, int iN, int iF, int iZ, boolean vMax){
   //Picture Timer
   tTime.every(timer * 1000, callback, counter);
 
-  /* Good abort criteria
+  // What about the 
   while ((!digitalRead(X_MAX_PIN) && !digitalRead(X_MIN_PIN)) 
     && (xStepper.distanceToGo() > 0 || gStepper.distanceToGo() > 0 
-    || nStepper.distanceToGo() > 0 || fStepper.distanceToGo() > 0 || zStepper.distanceToGo() > 0)){  */
-    //test abort criteria
+    || nStepper.distanceToGo() > 0 || fStepper.distanceToGo() > 0 || zStepper.distanceToGo() > 0)){ 
+    /*test abort criteria
     while ((xStepper.distanceToGo() > 0 || gStepper.distanceToGo() > 0 
-    || nStepper.distanceToGo() > 0 || fStepper.distanceToGo() > 0 || zStepper.distanceToGo() > 0)){  
+    || nStepper.distanceToGo() > 0 || fStepper.distanceToGo() > 0 || zStepper.distanceToGo() > 0)){  */
     xStepper.run();
     gStepper.run(); 
     nStepper.run(); 
@@ -405,13 +405,13 @@ void runHome (){
 
   //Move
  //TEST: decomment this loop 
-  /*while(!digitalRead(X_MAX_PIN) && !digitalRead(X_MIN_PIN)){
+  while(!digitalRead(X_MAX_PIN) && !digitalRead(X_MIN_PIN)){
     xStepper.runSpeed();
     gStepper.runSpeed();
     nStepper.runSpeed();
     fStepper.runSpeed();
     zStepper.runSpeed();
-  }*/
+  }
 
   //set Pos to 0
   xStepper.setCurrentPosition(0);
